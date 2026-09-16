@@ -3,6 +3,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const loginForm = document.getElementById("login-form");
+  const logoutButton = document.getElementById("logout-button");
+  const loginMessage = document.getElementById("login-message");
+  let teacherAuthorization = null;
+
+  function showLoginMessage(message, className) {
+    loginMessage.textContent = message;
+    loginMessage.className = className;
+    loginMessage.classList.remove("hidden");
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -80,6 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )}/unregister?email=${encodeURIComponent(email)}`,
         {
           method: "DELETE",
+          headers: { Authorization: teacherAuthorization },
         }
       );
 
@@ -124,6 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
         )}/signup?email=${encodeURIComponent(email)}`,
         {
           method: "POST",
+          headers: { Authorization: teacherAuthorization },
         }
       );
 
@@ -153,6 +165,43 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
     }
+  });
+
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const username = document.getElementById("teacher-username").value;
+    const password = document.getElementById("teacher-password").value;
+    const credentials = btoa(`${username}:${password}`);
+
+    try {
+      const response = await fetch("/auth/check", {
+        headers: { Authorization: `Basic ${credentials}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid teacher credentials");
+      }
+
+      teacherAuthorization = `Basic ${credentials}`;
+      loginForm.reset();
+      document.getElementById("teacher-username").disabled = true;
+      document.getElementById("teacher-password").disabled = true;
+      loginForm.querySelector('button[type="submit"]').classList.add("hidden");
+      logoutButton.classList.remove("hidden");
+      showLoginMessage("Teacher access enabled.", "success");
+    } catch (error) {
+      showLoginMessage(error.message, "error");
+    }
+  });
+
+  logoutButton.addEventListener("click", () => {
+    teacherAuthorization = null;
+    document.getElementById("teacher-username").disabled = false;
+    document.getElementById("teacher-password").disabled = false;
+    loginForm.querySelector('button[type="submit"]').classList.remove("hidden");
+    logoutButton.classList.add("hidden");
+    showLoginMessage("Teacher access disabled.", "info");
   });
 
   // Initialize app
